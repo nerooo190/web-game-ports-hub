@@ -29,11 +29,14 @@ Ohne Samsung-Zertifikat lässt sich nichts auf den TV installieren – das ist e
 5. **Bauen & installieren** (im Projektordner, `<Tizen Studio>/tools/ide/bin` im PATH):
    ```
    node scripts/build-tizen.mjs --profile <dein-profilname>
-   tizen install -n tizen/dist/*.wgt -t <TV-Name aus dem Device Manager>
+   tizen install -n WebGamePortsHub.wgt -s <TV-IP>:26101 -- tizen/dist
    ```
    Oder: *File → Import → Tizen → Tizen Project* auf `tizen/build` zeigen, dann Rechtsklick → *Run As → Tizen Web Application*.
 
 Die App erscheint danach im Apps-Bereich des TVs. Der Entwicklermodus und das Zertifikat laufen ab (Samsung-Zertifikate ca. 1 Jahr); dann Schritt 3/5 wiederholen.
+
+> Der Dateiname der .wgt darf **keine Leerzeichen** enthalten, sonst scheitert die Installation ohne Fehlermeldung (das Build-Skript benennt sie deshalb `WebGamePortsHub.wgt`).
+> `<tizen:profile>` muss `tv` heißen (nicht `tv-samsung`).
 
 ## Controller koppeln
 *Einstellungen → Allgemein → Externe Geräte-Manager → Eingabegeräte-Manager → Bluetooth-Gamepad* (je nach Firmware leicht anders benannt).

@@ -1,6 +1,6 @@
 // Assembles tizen/build/ (web app + config.xml + icon) and, if the Tizen CLI is available, packages a signed .wgt.
 // Usage: node scripts/build-tizen.mjs [--profile <signing-profile-name>]
-import { cp, rm, mkdir } from 'node:fs/promises';
+import { cp, rm, mkdir, rename } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,6 +25,14 @@ if (probe.status !== 0) {
   console.log('Tizen CLI not found. Open tizen/build in Tizen Studio (File > Import > Tizen > Tizen Project) or add <Tizen Studio>/tools/ide/bin to PATH and re-run.');
   process.exit(0);
 }
-const args = ['package', '-t', 'wgt', ...(profile ? ['-s', profile] : []), '-o', path.join(root, 'tizen', 'dist'), '--', out];
+const q = (p) => `"${p}"`; // shell:true joins args with spaces; the repo path may contain some
+const args = ['package', '-t', 'wgt', ...(profile ? ['-s', profile] : []), '-o', q(path.join(root, 'tizen', 'dist')), '--', q(out)];
 console.log('tizen', args.join(' '));
-process.exit(spawnSync('tizen', args, { stdio: 'inherit', shell: true }).status ?? 1);
+const status = spawnSync('tizen', args, { stdio: 'inherit', shell: true }).status ?? 1;
+if (status === 0) {
+  // `tizen install` fails silently on the TV when the .wgt file name contains spaces, so give it a plain name.
+  const dist = path.join(root, 'tizen', 'dist');
+  await rename(path.join(dist, 'Web Game Ports Hub.wgt'), path.join(dist, 'WebGamePortsHub.wgt'));
+  console.log('package:', path.join('tizen', 'dist', 'WebGamePortsHub.wgt'));
+}
+process.exit(status);
