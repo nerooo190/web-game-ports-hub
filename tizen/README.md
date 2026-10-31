@@ -36,11 +36,12 @@ Ohne Samsung-Zertifikat lässt sich nichts auf den TV installieren – das ist e
 Die App erscheint danach im Apps-Bereich des TVs. Der Entwicklermodus und das Zertifikat laufen ab (Samsung-Zertifikate ca. 1 Jahr); dann Schritt 3/5 wiederholen.
 
 > Der Dateiname der .wgt darf **keine Leerzeichen** enthalten, sonst scheitert die Installation ohne Fehlermeldung (das Build-Skript benennt sie deshalb `WebGamePortsHub.wgt`).
-> `<tizen:profile>` muss `tv` heißen (nicht `tv-samsung`).
+> `config.xml` folgt Samsungs eigener Vorlage (`<tizen:profile name="tv"/>`).
 
 ## Controller koppeln
 *Einstellungen → Allgemein → Externe Geräte-Manager → Eingabegeräte-Manager → Bluetooth-Gamepad* (je nach Firmware leicht anders benannt).
 
-## Nicht getestet
-Ich konnte die TV-App ohne dein Zertifikat und deinen TV nicht installieren oder starten. Ungeprüft sind insbesondere:
-Gamepad-Erkennung im Tizen-Webview, der Aufruf des TV-Browsers (`launchAppControl`) und ob einzelne Spiele-Hosts im TV-Browser laufen.
+## Stand
+Getestet: signiertes Paket baut, installiert sich auf einem 2024er Neo QLED (GQ43QN90D, Tizen 9.0) und startet.
+Nicht geprüft: Steuerung per Controller und Fernbedienung im Tizen-Webview, der Aufruf des TV-Browsers (`launchAppControl`)
+und ob einzelne Spiele-Hosts im TV-Browser laufen.
