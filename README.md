@@ -12,7 +12,7 @@ original game files; entries without a playable link open their source repo.
 | Windows (.exe installer + portable) | Electron, `electron/` | `cd electron && npm i && npm run dist:win` |
 | Linux AppImage | Electron | `cd electron && npm i && npm run dist:linux` (on Linux) |
 | Android APK (also Android TV) | Capacitor, `android/` | needs JDK 17 + Android SDK: `npm run android:apk` |
-| Samsung Tizen TV (later) | `tizen/config.xml` | see below |
+| Samsung Tizen TV (2024 Neo QLED, controller) | `tizen/` | see [tizen/README.md](tizen/README.md) (needs your Samsung certificate) |
 
 CI (`.github/workflows/build.yml`) builds all of the above on GitHub Actions (Windows, Linux, APK) — run it via *Actions → Build apps*.
 
@@ -27,8 +27,5 @@ Mouse/touch, or keyboard / TV remote: arrow keys move focus, Enter opens, `F` fa
 ## Platform notes
 - **Embedding:** many hosts send `X-Frame-Options`. Electron strips those headers for the in-app frame. On Android games open
   in a Custom Tab. In plain browsers, the "New tab" button is the fallback.
-- **Tizen TV:** copy `web/*` next to `tizen/config.xml` (plus a 512×512 `icon.png`), open the folder in Tizen Studio,
-  create a Samsung certificate profile, and build/run on the TV in developer mode. Tizen's webview supports iframes,
-  but hosts that forbid framing can't be opened (no external browser) — filter these out before a store submission.
-  Samsung store review may reject a launcher for third-party ports of commercial games; sideload for personal use.
+- **Tizen TV:** games open in the TV browser; remote and gamepad supported. Setup: [tizen/README.md](tizen/README.md).
 - **Legal:** many catalogued ports are fan ports of commercial games. This app only links to them, like the upstream catalog.

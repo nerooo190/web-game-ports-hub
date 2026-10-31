@@ -8,6 +8,7 @@
   <name>Web Game Ports Hub</name>
   <tizen:profile name="tv-samsung"/>
   <tizen:privilege name="http://tizen.org/privilege/internet"/>
-  <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable" encryption="disable" install-location="auto"/>
+  <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
+  <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable" encryption="disable" install-location="auto" hwkey-event="enable"/>
   <access origin="*" subdomains="true"/>
 </widget>

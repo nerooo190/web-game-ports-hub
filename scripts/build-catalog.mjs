@@ -62,5 +62,9 @@ const stats = {
   both: games.filter((g) => g.play && g.source).length,
   withThumb: games.filter((g) => g.thumb).length,
 };
-await writeFile(outFile, JSON.stringify({ generated: new Date().toISOString(), stats, games }));
+const payload = JSON.stringify({ generated: new Date().toISOString(), stats, games });
+await writeFile(outFile, payload);
+// Also as a script: fetch() can't read file:// (Electron, Tizen), a <script> tag can.
+await writeFile(outFile.replace(/\.json$/, '.js'), `window.CATALOG=${payload};
+`);
 console.log(stats, '->', path.relative(root, outFile));

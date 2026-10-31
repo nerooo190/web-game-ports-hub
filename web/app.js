@@ -8,6 +8,10 @@
 
   const isCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   const isElectron = !!window.native;
+  const isTizen = /Tizen/i.test(navigator.userAgent) || !!window.tizen;
+  function exitApp() {
+    try { if (isTizen) window.tizen.application.getCurrentApplication().exit(); else if (isElectron) window.close(); } catch {}
+  }
 
   let games = [];
   let filter = 'all';
@@ -18,6 +22,15 @@
 
   // ---------- platform bridge ----------
   function openExternal(url) {
+    if (isTizen && window.tizen?.application && window.tizen.ApplicationControl) {
+      // Hands the URL to the TV's built-in browser (works with Bluetooth controllers, ignores frame restrictions).
+      try {
+        window.tizen.application.launchAppControl(
+          new window.tizen.ApplicationControl('http://tizen.org/appcontrol/operation/view', url), null,
+          () => {}, (err) => console.warn('launchAppControl', err));
+        return;
+      } catch (err) { console.warn(err); }
+    }
     if (isElectron) return window.native.openExternal(url);
     if (isCapacitor && window.Capacitor.Plugins?.Browser) return window.Capacitor.Plugins.Browser.open({ url });
     window.open(url, '_blank', 'noopener');
@@ -28,8 +41,8 @@
   function play(g) {
     recent = [g.id, ...recent.filter((x) => x !== g.id)].slice(0, 30);
     store.set('recent', recent);
-    // Android WebView honours X-Frame-Options, so hand off to the in-app browser there.
-    if (isCapacitor) return openExternal(g.play);
+    // Android WebView / Tizen honour X-Frame-Options, so hand off to the in-app / TV browser there.
+    if (isCapacitor || isTizen) return openExternal(g.play);
     $('#pTitle').textContent = g.name;
     $('#pOpen').href = g.play;
     frame.src = g.play;
@@ -44,6 +57,7 @@
     return true;
   }
   $('#pBack').onclick = closePlayer;
+  $('#pOpen').onclick = (e) => { if (isTizen) { e.preventDefault(); openExternal($('#pOpen').href); } };
   $('#pFs').onclick = () => (frame.requestFullscreen ? frame.requestFullscreen() : null);
 
   // ---------- list ----------
@@ -151,19 +165,26 @@
 
   // ---------- keyboard / D-pad (desktop, Android TV, Tizen) ----------
   const BACK_KEYS = new Set(['Escape', 'BrowserBack', 'GoBack']);
+  const DIRS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
   document.addEventListener('keydown', (e) => {
     if (BACK_KEYS.has(e.key) || e.keyCode === 10009 /* Tizen back */) {
-      if (closePlayer()) e.preventDefault();
+      if (closePlayer()) { e.preventDefault(); return; }
+      if (isTizen && e.keyCode === 10009) exitApp(); // remote Back on the home screen leaves the app
       return;
     }
     if (!player.hidden) return;
-    const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    const dir = DIRS[e.key];
     if (!dir) return;
+    if (document.activeElement === q && dir[1] === 0) return; // let caret move in the search box
+    if (moveFocus(dir)) e.preventDefault();
+  });
+
+  // Spatial navigation: focus the nearest focusable element in the given direction.
+  function moveFocus(dir) {
     const a = document.activeElement;
-    if (a === q && dir[1] === 0) return; // let caret move in the search box
     const items = [...document.querySelectorAll('#q, .chip, .az button, .card')].filter((el) => el.offsetParent !== null);
     const from = a && items.includes(a) ? a.getBoundingClientRect() : null;
-    if (!from) { items[0]?.focus(); e.preventDefault(); return; }
+    if (!from) { items[0]?.focus(); return true; }
     const cx = from.left + from.width / 2, cy = from.top + from.height / 2;
     let best = null, bestScore = Infinity;
     for (const el of items) {
@@ -176,14 +197,79 @@
       const score = along + across * 2.5;
       if (score < bestScore) { bestScore = score; best = el; }
     }
-    if (best) { best.focus(); best.scrollIntoView({ block: 'nearest' }); e.preventDefault(); }
-  });
+    if (best) { best.focus(); best.scrollIntoView({ block: 'nearest' }); return true; }
+    return false;
+  }
+
+  function jumpLetter(step) {
+    const marks = [...grid.querySelectorAll('[data-letter]')];
+    if (!marks.length) return;
+    const a = document.activeElement;
+    let i = -1;
+    if (a && grid.contains(a)) marks.forEach((m, k) => { if (m === a || m.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_FOLLOWING) i = k; });
+    const t = marks[Math.min(marks.length - 1, Math.max(0, i + step))];
+    t.focus({ preventScroll: true });
+    t.scrollIntoView({ block: 'center' });
+  }
+
+  // ---------- gamepad (Xbox/PS/Switch pad: standard mapping) ----------
+  // A open · B back · X favorite · Y open in system/TV browser · LB/RB previous/next letter · D-pad/left stick move
+  // While a game is open the pad belongs to the game; hold Select/Back/Share for ~0.7 s to leave it.
+  const prev = new Set();
+  const repeatAt = new Map();
+  let selectSince = 0;
+  const hint = $('#hint');
+  addEventListener('gamepadconnected', () => { hint.hidden = false; });
+
+  function padLoop(now) {
+    const gp = [...(navigator.getGamepads ? navigator.getGamepads() : [])].find((g) => g && g.connected);
+    if (gp) {
+      const b = (i) => !!gp.buttons[i]?.pressed;
+      const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+      const cur = new Set();
+      if (b(14) || ax < -0.6) cur.add('left');
+      if (b(15) || ax > 0.6) cur.add('right');
+      if (b(12) || ay < -0.6) cur.add('up');
+      if (b(13) || ay > 0.6) cur.add('down');
+      [[0, 'a'], [1, 'b'], [2, 'x'], [3, 'y'], [4, 'lb'], [5, 'rb'], [8, 'select']].forEach(([i, n]) => { if (b(i)) cur.add(n); });
+
+      if (!player.hidden) {
+        if (cur.has('select')) { selectSince ||= now; if (now - selectSince > 700) { closePlayer(); selectSince = 0; } } else selectSince = 0;
+      } else {
+        for (const act of cur) {
+          const isNew = !prev.has(act);
+          const move = act === 'left' || act === 'right' || act === 'up' || act === 'down';
+          let fire = isNew;
+          if (move && !isNew && now >= (repeatAt.get(act) || 0)) fire = true; // auto-repeat when held
+          if (!fire) continue;
+          repeatAt.set(act, now + (isNew ? 380 : 110));
+          padAction(act);
+        }
+      }
+      prev.clear(); cur.forEach((x) => prev.add(x)); // also tracked while a game is open, so a held button doesn't re-fire on return
+    }
+    requestAnimationFrame(padLoop);
+  }
+  function padAction(act) {
+    const a = document.activeElement;
+    const g = a?.dataset?.id ? games.find((x) => x.id === +a.dataset.id) : null;
+    switch (act) {
+      case 'left': case 'right': case 'up': case 'down':
+        if (a === q) q.blur();
+        moveFocus({ left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }[act]); break;
+      case 'a': (a && a !== document.body ? a : document.querySelector('.card'))?.click(); break;
+      case 'b': if (document.activeElement === q || q.value) { q.value = ''; render(); } else if (filter !== 'all') document.querySelector('[data-f="all"]').click(); else exitApp(); break;
+      case 'x': a?.querySelector?.('.fav')?.click(); break;
+      case 'y': if (g) openExternal(g.play || g.source); break;
+      case 'lb': jumpLetter(-1); break;
+      case 'rb': jumpLetter(1); break;
+    }
+  }
+  requestAnimationFrame(padLoop);
 
   // ---------- boot ----------
-  fetch('data/games.json').then((r) => r.json()).then((d) => {
-    games = d.games;
-    render();
-  }).catch(() => { $('#empty').hidden = false; $('#empty').textContent = 'Could not load catalog.'; });
+  if (window.CATALOG) { games = window.CATALOG.games; render(); }
+  else { $('#empty').hidden = false; $('#empty').textContent = 'Could not load catalog.'; }
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
