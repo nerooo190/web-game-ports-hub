@@ -20,6 +20,26 @@
 
   const grid = $('#grid'), q = $('#q');
 
+  // On a TV a focused text field pops up the on-screen keyboard, which swallows remote and gamepad input.
+  // So there the search field stays read-only until the user explicitly activates it (Enter / A).
+  let reopening = false;
+  if (isTizen) {
+    q.readOnly = true;
+    q.addEventListener('blur', () => { if (!reopening) q.readOnly = true; });
+    q.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      if (q.readOnly) startSearch(); else q.blur(); // Enter on the keyboard's "done" closes the field again
+    });
+  }
+  function startSearch() {
+    // blur + focus again so the TV opens its keyboard for the now-editable field
+    reopening = true;
+    q.blur();
+    q.readOnly = false;
+    q.focus();
+    reopening = false;
+  }
+
   // ---------- platform bridge ----------
   function openExternal(url) {
     if (isTizen && window.tizen?.application && window.tizen.ApplicationControl) {
@@ -184,7 +204,7 @@
     const a = document.activeElement;
     const items = [...document.querySelectorAll('#q, .chip, .az button, .card')].filter((el) => el.offsetParent !== null);
     const from = a && items.includes(a) ? a.getBoundingClientRect() : null;
-    if (!from) { items[0]?.focus(); return true; }
+    if (!from) { (document.querySelector('.card') || items[0])?.focus(); return true; }
     const cx = from.left + from.width / 2, cy = from.top + from.height / 2;
     let best = null, bestScore = Infinity;
     for (const el of items) {
@@ -257,7 +277,9 @@
       case 'left': case 'right': case 'up': case 'down':
         if (a === q) q.blur();
         moveFocus({ left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }[act]); break;
-      case 'a': (a && a !== document.body ? a : document.querySelector('.card'))?.click(); break;
+      case 'a':
+        if (a === q) { if (isTizen && q.readOnly) startSearch(); break; }
+        (a && a !== document.body ? a : document.querySelector('.card'))?.click(); break;
       case 'b': if (document.activeElement === q || q.value) { q.value = ''; render(); } else if (filter !== 'all') document.querySelector('[data-f="all"]').click(); else exitApp(); break;
       case 'x': a?.querySelector?.('.fav')?.click(); break;
       case 'y': if (g) openExternal(g.play || g.source); break;
@@ -268,7 +290,11 @@
   requestAnimationFrame(padLoop);
 
   // ---------- boot ----------
-  if (window.CATALOG) { games = window.CATALOG.games; render(); }
+  if (window.CATALOG) {
+    games = window.CATALOG.games;
+    render();
+    if (isTizen) document.querySelector('.card')?.focus({ preventScroll: true }); // start on a game, never in the search field
+  }
   else { $('#empty').hidden = false; $('#empty').textContent = 'Could not load catalog.'; }
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
