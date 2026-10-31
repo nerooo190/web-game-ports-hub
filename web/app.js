@@ -89,12 +89,33 @@
       if (g.play) meta.append(tag('▶ ' + g.playHost, 'play'));
       if (g.source) meta.append(tag('📦 ' + g.sourceHost, 'src'));
 
-      card.append(name, fav, meta);
+      card.append(thumbEl(g), name, fav, meta);
       card.onclick = () => (g.play ? play(g) : openExternal(g.source));
       card.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); } else if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey) toggleFav(g.id, fav); };
       frag.append(card);
     }
     grid.replaceChildren(frag);
+  }
+  // Remote image if known, else (or if it fails to load) a colored placeholder with initials.
+  function thumbEl(g) {
+    const box = document.createElement('div');
+    box.className = 'thumb';
+    let h = 0;
+    for (const ch of g.name) h = (h * 31 + ch.codePointAt(0)) % 360;
+    box.style.setProperty('--h', h);
+    const words = g.name.replace(/[^\p{L}\p{N} ]/gu, '').split(/\s+/).filter(Boolean);
+    box.dataset.ini = (words.length > 1 ? words[0][0] + words[1][0] : (words[0] || '?').slice(0, 2)).toUpperCase();
+    if (g.thumb) {
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+      img.alt = '';
+      img.onerror = () => img.remove();
+      img.src = g.thumb;
+      box.append(img);
+    }
+    return box;
   }
   const tag = (t, c) => Object.assign(document.createElement('span'), { className: 'tag ' + c, textContent: t });
 

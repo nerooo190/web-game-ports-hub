@@ -17,6 +17,13 @@ if (process.argv.includes('--fetch')) {
 }
 
 const md = await readFile(srcFile, 'utf8');
+let thumbCache = {};
+try { thumbCache = JSON.parse(await readFile(path.join(root, 'scripts', 'thumbs-cache.json'), 'utf8')); } catch {}
+// Thumbnail priority: og:image of the play page (scripts/fetch-thumbs.mjs), then the GitHub repo preview card.
+const githubCard = (u) => {
+  const m = u?.match(/^https:\/\/github\.com\/([^/]+)\/([^/#?]+)/);
+  return m ? `https://opengraph.githubassets.com/1/${m[1]}/${m[2]}` : null;
+};
 const linkRe = /\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/;
 
 const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
@@ -44,6 +51,7 @@ for (const line of md.split(/\r?\n/)) {
     playHost: play ? hostOf(play) : null,
     source,
     sourceHost: source ? hostOf(source) : null,
+    thumb: (play && thumbCache[play]) || githubCard(source),
   });
 }
 
@@ -52,6 +60,7 @@ const stats = {
   playable: games.filter((g) => g.play).length,
   withSource: games.filter((g) => g.source).length,
   both: games.filter((g) => g.play && g.source).length,
+  withThumb: games.filter((g) => g.thumb).length,
 };
 await writeFile(outFile, JSON.stringify({ generated: new Date().toISOString(), stats, games }));
 console.log(stats, '->', path.relative(root, outFile));
