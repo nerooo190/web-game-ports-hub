@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Web Game Ports Hub</title>
+<meta name="theme-color" content="#0f1220">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <h1>🎮 Web Game Ports <span id="count" class="muted"></span></h1>
+  <input id="q" type="search" placeholder="Search games…" autocomplete="off" aria-label="Search games">
+  <div class="chips" id="filters" role="group" aria-label="Filter">
+    <button class="chip on" data-f="all">All</button>
+    <button class="chip" data-f="play">▶ Playable</button>
+    <button class="chip" data-f="source">📦 Source</button>
+    <button class="chip" data-f="both">⭐ Both</button>
+    <button class="chip" data-f="fav">♥ Favorites</button>
+    <button class="chip" data-f="recent">🕘 Recent</button>
+  </div>
+  <nav class="az" id="az" aria-label="Jump to letter"></nav>
+</header>
+
+<main id="grid" class="grid" aria-live="polite"></main>
+<p id="empty" class="muted center" hidden>No games match.</p>
+
+<footer class="muted center">
+  Catalog data from <a href="https://github.com/Carter54git/Ultimate-Catalog-Of-Web-Game-Ports" target="_blank" rel="noopener">Ultimate Catalog of Web Game Ports</a>.
+  Games are hosted by third parties and are not bundled here; many need your own original game files.
+</footer>
+
+<section id="player" class="player" hidden>
+  <div class="bar">
+    <button id="pBack" class="chip">← Back</button>
+    <strong id="pTitle"></strong>
+    <span class="spacer"></span>
+    <button id="pFs" class="chip">⛶ Fullscreen</button>
+    <a id="pOpen" class="chip" target="_blank" rel="noopener">↗ New tab</a>
+  </div>
+  <iframe id="frame" title="Game" allow="fullscreen; gamepad; autoplay; clipboard-write; cross-origin-isolated" referrerpolicy="no-referrer"></iframe>
+  <p class="muted center small">Blank screen? Some hosts refuse embedding — use “New tab”.</p>
+</section>
+
+<script src="app.js"></script>
+</body>
+</html>

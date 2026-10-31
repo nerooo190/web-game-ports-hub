@@ -1,0 +1,44 @@
+{
+  "name": "web-game-ports-hub",
+  "productName": "Web Game Ports Hub",
+  "version": "1.0.0",
+  "description": "Catalog and launcher for browser game ports",
+  "author": "lpandreu97 <lpandreu97@gmail.com>",
+  "homepage": "https://github.com/Carter54git/Ultimate-Catalog-Of-Web-Game-Ports",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "sync": "node ../scripts/sync-web.mjs electron/web",
+    "dist:win": "npm run sync && electron-builder --win nsis portable",
+    "dist:linux": "npm run sync && electron-builder --linux AppImage"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "dev.gameports.hub",
+    "files": [
+      "main.js",
+      "preload.js",
+      "web/**"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "signAndEditExecutable": false
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Game",
+      "maintainer": "lpandreu97 <lpandreu97@gmail.com>"
+    }
+  }
+}

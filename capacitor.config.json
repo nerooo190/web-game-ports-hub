@@ -1,0 +1,6 @@
+{
+  "appId": "dev.gameports.hub",
+  "appName": "Web Game Ports Hub",
+  "webDir": "web",
+  "android": { "allowMixedContent": false }
+}
